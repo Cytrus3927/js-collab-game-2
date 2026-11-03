@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ucieczka z serwerowni</title>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <h1>Ucieczka z serwerowni</h1>
+  <p>Otwórz konsolę dewelopera (F12 → Console) i wpisz <code>pomoc()</code>.</p>
+  <p>Kod edytuj w app.js. Po zapisaniu odśwież stronę.</p>
+</body>
+</html>
