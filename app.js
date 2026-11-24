@@ -74,24 +74,79 @@ function opisPokoju(s) {
 
 // ---------- Polecenia (trafiaja do obiektu gra) ----------
 
+// Pomocnicze funkcje do ladnego ukladu tekstu w konsoli (czcionka konsoli jest rowna, wiec kolumny sie zgadzaja).
+const SZEROKOSC_EKRANU = 64;
+
+function linia() {
+  return "─".repeat(SZEROKOSC_EKRANU);
+}
+
+// Jeden wiersz tabeli polecen: polecenie wyrownane do lewej, obok krotki opis.
+function wierszPomocy(polecenie, opis) {
+  return "  " + polecenie.padEnd(34) + opis;
+}
+
+// Ekran powitalny: tytul, fabula z celem gry, PELNA lista polecen i opis pokoju.
 function komendaStart() {
   stan = stanPoczatkowy();
-  console.log("UCIECZKA Z SERWEROWNI. Zasilanie awaryjne wystarczy na " + MAKS_ENERGIA + " tur.");
+
+  console.log("%c UCIECZKA Z SERWEROWNI ", "background:#14532d;color:#bbf7d0;font-size:18px;font-weight:bold;padding:6px 10px;");
+  console.log(
+    "\n" +
+    "Piątek, 16:59. W szkolnej serwerowni zgasło światło, a drzwi się zablokowały.\n" +
+    "Zasilanie awaryjne wystarczy na " + MAKS_ENERGIA + " tur. Każda udana czynność kosztuje 1.\n" +
+    "\n" +
+    "CEL: znajdź kartę dostępu i bezpiecznik, zamontuj go w serwerowni,\n" +
+    "     a potem w pokoju 4 wpisz gra.akcja(\"wyjdz\"), żeby otworzyć drzwi."
+  );
+
   komendaPomoc();
+
+  console.log("\nTU JESTEŚ: " + nazwaPokoju(stan.pokoj));
   komendaRozejrzyj();
 }
 
+// Pelna pomoc: polecenia pogrupowane tematycznie, a pod spodem zasady. Wszystko bezplatne.
 function komendaPomoc() {
-  console.log("Dostępne polecenia: gra.start(), gra.pomoc(), gra.status(), gra.mapa(), gra.rozejrzyj(),");
-  console.log("  gra.idz(\"prawo\"), gra.idz(\"lewo\"), gra.akcja(\"karta\"), gra.akcja(\"bezpiecznik\"),");
-  console.log("  gra.akcja(\"napraw\"), gra.akcja(\"wyjdz\"), gra.historia(), gra.eksportuj(), gra.importuj(tekst)");
-  console.log("# Każdy udany ruch i każda wykonana akcja kosztuje dokładnie 1 energię.");
-  console.log("# Mapa, opisy, pomoc i status są bezpłatne.");
-  console.log("# Literówka, ruch w ścianę, ponowne zabranie przedmiotu i akcja bez spełnionych warunków są bezpłatne.");
-  console.log("# Bezpiecznik znika z kieszeni po naprawie i nie wraca do magazynu.");
-  console.log("# Wygrana ostatnim ruchem jest dozwolona. Po końcu gry ruch i akcje są zablokowane.");
-  console.log("# Historia zapamiętuje zaakceptowane komendy (odmowy się nie liczą) i jest częścią zapisu.");
-  console.log("# Zapis: console.log(gra.eksportuj()), wczytanie: gra.importuj(prompt(\"Wklej JSON\"))");
+  console.log(
+    "\n" + linia() + "\n" +
+    "POLECENIA\n" + linia() + "\n" +
+    "RUCH\n" +
+    wierszPomocy("gra.idz(\"prawo\")", "pokój o numerze wyżej") + "\n" +
+    wierszPomocy("gra.idz(\"lewo\")", "pokój o numerze niżej") + "\n" +
+    "\n" +
+    "AKCJE\n" +
+    wierszPomocy("gra.akcja(\"karta\")", "recepcja: zabierz kartę dostępu") + "\n" +
+    wierszPomocy("gra.akcja(\"bezpiecznik\")", "magazyn: zabierz bezpiecznik") + "\n" +
+    wierszPomocy("gra.akcja(\"napraw\")", "serwerownia: zamontuj bezpiecznik") + "\n" +
+    wierszPomocy("gra.akcja(\"wyjdz\")", "wyjście: otwórz drzwi (karta + prąd)") + "\n" +
+    "\n" +
+    "INFORMACJE (bezpłatne)\n" +
+    wierszPomocy("gra.rozejrzyj()", "opis pokoju, w którym jesteś") + "\n" +
+    wierszPomocy("gra.status()", "pokój, energia, przedmioty, zasilanie") + "\n" +
+    wierszPomocy("gra.mapa()", "mapa pokoi ze znacznikiem") + "\n" +
+    wierszPomocy("gra.historia()", "zaakceptowane komendy po kolei") + "\n" +
+    wierszPomocy("gra.pomoc()", "ten ekran") + "\n" +
+    "\n" +
+    "GRA I ZAPIS\n" +
+    wierszPomocy("gra.start()", "nowa gra od początku") + "\n" +
+    wierszPomocy("console.log(gra.eksportuj())", "zapis postępu jako tekst JSON") + "\n" +
+    wierszPomocy("gra.importuj(prompt(\"JSON\"))", "wczytanie postępu z tekstu JSON")
+  );
+
+  console.log(
+    "\n" + linia() + "\n" +
+    "ZASADY\n" + linia() + "\n" +
+    "  • Udany ruch i każda wykonana akcja kosztują dokładnie 1 energię.\n" +
+    "  • Informacje, błędna komenda, ściana i akcja bez spełnionych warunków\n" +
+    "    są bezpłatne.\n" +
+    "  • Bezpiecznik znika z kieszeni po naprawie i nie wraca do magazynu.\n" +
+    "  • Przy energii 0 przegrywasz, chyba że właśnie otworzyłeś wyjście\n" +
+    "    (wygrana ostatnim ruchem jest dozwolona).\n" +
+    "  • Po końcu gry ruch i akcje są zablokowane. Zapis i gra.start() działają.\n" +
+    "  • Historia pamięta tylko zaakceptowane komendy i jest częścią zapisu.\n" +
+    linia()
+  );
 }
 
 function komendaStatus() {
