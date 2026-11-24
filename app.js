@@ -155,6 +155,7 @@ function komendaStatus() {
   console.log("Bezpiecznik w kieszeni: " + (stan.bezpiecznik ? "tak" : "nie"));
   console.log("Zasilanie: " + (stan.zasilanie ? "działa" : "wyłączone"));
   console.log("Zaakceptowane komendy: " + stan.historia.length);
+  console.log("Zaakceptowane komendy: " + stan.historia.length);
   if (stan.koniec) {
     console.log("Gra: zakończona (" + (stan.wygrana ? "wygrana" : "przegrana") + ")");
   } else {
@@ -193,6 +194,19 @@ function komendaAkcja(co) {
     return;
   }
   wykonajKomende(co);
+}
+
+// Wypisuje historie zaakceptowanych komend (bezplatnie) i zwraca JEJ KOPIE,
+// zeby zmiana zwroconej tablicy w konsoli nie ruszyla biezacego stanu.
+function komendaHistoria() {
+  if (stan.historia.length === 0) {
+    console.log("Historia jest pusta. Zaakceptowane komendy pojawią się tutaj.");
+  } else {
+    for (let i = 0; i < stan.historia.length; i = i + 1) {
+      console.log((i + 1) + ". " + stan.historia[i]);
+    }
+  }
+  return [...stan.historia];
 }
 
 // Wypisuje historie zaakceptowanych komend (bezplatnie) i zwraca JEJ KOPIE,
@@ -263,6 +277,26 @@ function komendaImportuj(tekst) {
     return odrzucImport("nieobsługiwana wersja zapisu (obsługiwane: 1 i " + WERSJA_ZAPISU + ").");
   }
 
+  // Kandydat powstaje osobno. Biezacy stan podmieniamy dopiero po sprawdzeniu calosci.
+  let kandydat = null;
+  if (pakiet.wersja === WERSJA_ZAPISU) {
+    if (!czyStan(pakiet.stan)) {
+      return odrzucImport("stan w zapisie jest niepoprawny.");
+    }
+    kandydat = kopiaStanu(pakiet.stan);
+  } else if (pakiet.wersja === 1) {
+    // Zapis ze starszej wersji (bez historii komend): przyjmujemy go z pusta historia.
+    if (!czyStanWersji1(pakiet.stan)) {
+      return odrzucImport("stan w zapisie (wersja 1) jest niepoprawny.");
+    }
+    kandydat = stanZWersji1(pakiet.stan);
+  } else {
+    return odrzucImport("nieobsługiwana wersja zapisu (obsługiwane: 1 i " + WERSJA_ZAPISU + ").");
+  }
+
+  // Dopiero tutaj, po sprawdzeniu calosci: podmiana stanu nowym obiektem ze znanych pol.
+  stan = kandydat;
+  console.log("Wczytano zapis (wersja " + pakiet.wersja + "). Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
   // Dopiero tutaj, po sprawdzeniu calosci: podmiana stanu nowym obiektem ze znanych pol.
   stan = kandydat;
   console.log("Wczytano zapis (wersja " + pakiet.wersja + "). Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
@@ -279,6 +313,7 @@ window.gra = {
   rozejrzyj: komendaRozejrzyj,
   idz: komendaIdz,
   akcja: komendaAkcja,
+  historia: komendaHistoria,
   historia: komendaHistoria,
   eksportuj: komendaEksportuj,
   importuj: komendaImportuj
