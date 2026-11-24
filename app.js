@@ -74,23 +74,78 @@ function opisPokoju(s) {
 
 // ---------- Polecenia (trafiaja do obiektu gra) ----------
 
-function komendaStart() {
-  stan = stanPoczatkowy();
-  console.log("UCIECZKA Z SERWEROWNI. Zasilanie awaryjne wystarczy na " + MAKS_ENERGIA + " tur.");
-  komendaPomoc();
-  komendaRozejrzyj();
+// Pomocnicze funkcje do ladnego ukladu tekstu w konsoli (czcionka konsoli jest rowna, wiec kolumny sie zgadzaja).
+const SZEROKOSC_EKRANU = 64;
+
+function linia() {
+  return "─".repeat(SZEROKOSC_EKRANU);
 }
 
+// Jeden wiersz tabeli polecen: polecenie wyrownane do lewej, obok krotki opis.
+function wierszPomocy(polecenie, opis) {
+  return "  " + polecenie.padEnd(34) + opis;
+}
+
+// Ekran powitalny: tytul, fabula, szybki start i opis pokoju. Pelna lista polecen jest w gra.pomoc().
+function komendaStart() {
+  stan = stanPoczatkowy();
+
+  console.log("%c UCIECZKA Z SERWEROWNI ", "background:#14532d;color:#bbf7d0;font-size:18px;font-weight:bold;padding:6px 10px;");
+  console.log(
+    "\n" +
+    "Piątek, 16:59. W szkolnej serwerowni zgasło światło, a drzwi się zablokowały.\n" +
+    "Zasilanie awaryjne wystarczy na " + MAKS_ENERGIA + " tur. Każda udana czynność kosztuje 1.\n" +
+    "\n" +
+    "CEL: znajdź kartę dostępu i bezpiecznik, zamontuj go w serwerowni,\n" +
+    "     a potem w pokoju 4 wpisz gra.akcja(\"wyjdz\"), żeby otworzyć drzwi."
+  );
+
+  komendaPomoc();
+
+  console.log("\nTU JESTEŚ: " + nazwaPokoju(stan.pokoj));
+  komendaRozejrzyj();
+}
+// Pelna pomoc: polecenia pogrupowane tematycznie, a pod spodem zasady. Wszystko bezplatne.
 function komendaPomoc() {
-  console.log("Dostępne polecenia: gra.start(), gra.pomoc(), gra.status(), gra.mapa(), gra.rozejrzyj(),");
-  console.log("  gra.idz(\"prawo\"), gra.idz(\"lewo\"), gra.akcja(\"karta\"), gra.akcja(\"bezpiecznik\"),");
-  console.log("  gra.akcja(\"napraw\"), gra.akcja(\"wyjdz\"), gra.eksportuj(), gra.importuj(tekst)");
-  console.log("# Każdy udany ruch i każda wykonana akcja kosztuje dokładnie 1 energię.");
-  console.log("# Mapa, opisy, pomoc i status są bezpłatne.");
-  console.log("# Literówka, ruch w ścianę, ponowne zabranie przedmiotu i akcja bez spełnionych warunków są bezpłatne.");
-  console.log("# Bezpiecznik znika z kieszeni po naprawie i nie wraca do magazynu.");
-  console.log("# Wygrana ostatnim ruchem jest dozwolona. Po końcu gry ruch i akcje są zablokowane.");
-  console.log("# Zapis: console.log(gra.eksportuj()), wczytanie: gra.importuj(prompt(\"Wklej JSON\"))");
+  console.log(
+    "\n" + linia() + "\n" +
+    "POLECENIA\n" + linia() + "\n" +
+    "RUCH\n" +
+    wierszPomocy("gra.idz(\"prawo\")", "pokój o numerze wyżej") + "\n" +
+    wierszPomocy("gra.idz(\"lewo\")", "pokój o numerze niżej") + "\n" +
+    "\n" +
+    "AKCJE\n" +
+    wierszPomocy("gra.akcja(\"karta\")", "recepcja: zabierz kartę dostępu") + "\n" +
+    wierszPomocy("gra.akcja(\"bezpiecznik\")", "magazyn: zabierz bezpiecznik") + "\n" +
+    wierszPomocy("gra.akcja(\"napraw\")", "serwerownia: zamontuj bezpiecznik") + "\n" +
+    wierszPomocy("gra.akcja(\"wyjdz\")", "wyjście: otwórz drzwi (karta + prąd)") + "\n" +
+    "\n" +
+    "INFORMACJE (bezpłatne)\n" +
+    wierszPomocy("gra.rozejrzyj()", "opis pokoju, w którym jesteś") + "\n" +
+    wierszPomocy("gra.status()", "pokój, energia, przedmioty, zasilanie") + "\n" +
+    wierszPomocy("gra.mapa()", "mapa pokoi ze znacznikiem") + "\n" +
+    wierszPomocy("gra.historia()", "zaakceptowane komendy po kolei") + "\n" +
+    wierszPomocy("gra.pomoc()", "ten ekran") + "\n" +
+    "\n" +
+    "GRA I ZAPIS\n" +
+    wierszPomocy("gra.start()", "nowa gra od początku") + "\n" +
+    wierszPomocy("console.log(gra.eksportuj())", "zapis postępu jako tekst JSON") + "\n" +
+    wierszPomocy("gra.importuj(prompt(\"JSON\"))", "wczytanie postępu z tekstu JSON")
+  );
+
+  console.log(
+    "\n" + linia() + "\n" +
+    "ZASADY\n" + linia() + "\n" +
+    "  • Udany ruch i każda wykonana akcja kosztują dokładnie 1 energię.\n" +
+    "  • Informacje, błędna komenda, ściana i akcja bez spełnionych warunków\n" +
+    "    są bezpłatne.\n" +
+    "  • Bezpiecznik znika z kieszeni po naprawie i nie wraca do magazynu.\n" +
+    "  • Przy energii 0 przegrywasz, chyba że właśnie otworzyłeś wyjście\n" +
+    "    (wygrana ostatnim ruchem jest dozwolona).\n" +
+    "  • Po końcu gry ruch i akcje są zablokowane. Zapis i gra.start() działają.\n" +
+    "  • Historia pamięta tylko zaakceptowane komendy i jest częścią zapisu.\n" +
+    linia()
+  );
 }
 
 function komendaStatus() {
@@ -99,6 +154,7 @@ function komendaStatus() {
   console.log("Karta: " + (stan.karta ? "tak" : "nie"));
   console.log("Bezpiecznik w kieszeni: " + (stan.bezpiecznik ? "tak" : "nie"));
   console.log("Zasilanie: " + (stan.zasilanie ? "działa" : "wyłączone"));
+  console.log("Zaakceptowane komendy: " + stan.historia.length);
   if (stan.koniec) {
     console.log("Gra: zakończona (" + (stan.wygrana ? "wygrana" : "przegrana") + ")");
   } else {
@@ -139,6 +195,19 @@ function komendaAkcja(co) {
   wykonajKomende(co);
 }
 
+// Wypisuje historie zaakceptowanych komend (bezplatnie) i zwraca JEJ KOPIE,
+// zeby zmiana zwroconej tablicy w konsoli nie ruszyla biezacego stanu.
+function komendaHistoria() {
+  if (stan.historia.length === 0) {
+    console.log("Historia jest pusta. Zaakceptowane komendy pojawią się tutaj.");
+  } else {
+    for (let i = 0; i < stan.historia.length; i = i + 1) {
+      console.log((i + 1) + ". " + stan.historia[i]);
+    }
+  }
+  return [...stan.historia];
+}
+
 // ---------- Eksport i import ----------
 
 // Zwraca tekst JSON. Nie zapisuje pliku. Czlowiek kopiuje tekst do edytora.
@@ -176,16 +245,27 @@ function komendaImportuj(tekst) {
   if (pakiet === null || typeof pakiet !== "object" || Array.isArray(pakiet)) {
     return odrzucImport("zapis musi być obiektem {wersja, stan}.");
   }
-  if (pakiet.wersja !== WERSJA_ZAPISU) {
-    return odrzucImport("nieobsługiwana wersja zapisu (potrzebna " + WERSJA_ZAPISU + ").");
-  }
-  if (!czyStan(pakiet.stan)) {
-    return odrzucImport("stan w zapisie jest niepoprawny.");
+
+  // Kandydat powstaje osobno. Biezacy stan podmieniamy dopiero po sprawdzeniu calosci.
+  let kandydat = null;
+  if (pakiet.wersja === WERSJA_ZAPISU) {
+    if (!czyStan(pakiet.stan)) {
+      return odrzucImport("stan w zapisie jest niepoprawny.");
+    }
+    kandydat = kopiaStanu(pakiet.stan);
+  } else if (pakiet.wersja === 1) {
+    // Zapis ze starszej wersji (bez historii komend): przyjmujemy go z pusta historia.
+    if (!czyStanWersji1(pakiet.stan)) {
+      return odrzucImport("stan w zapisie (wersja 1) jest niepoprawny.");
+    }
+    kandydat = stanZWersji1(pakiet.stan);
+  } else {
+    return odrzucImport("nieobsługiwana wersja zapisu (obsługiwane: 1 i " + WERSJA_ZAPISU + ").");
   }
 
-  // Dopiero tutaj, po sprawdzeniu calosci: nowy obiekt tylko ze znanych pol.
-  stan = kopiaStanu(pakiet.stan);
-  console.log("Wczytano zapis. Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
+  // Dopiero tutaj, po sprawdzeniu calosci: podmiana stanu nowym obiektem ze znanych pol.
+  stan = kandydat;
+  console.log("Wczytano zapis (wersja " + pakiet.wersja + "). Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
   return true;
 }
 
@@ -199,6 +279,7 @@ window.gra = {
   rozejrzyj: komendaRozejrzyj,
   idz: komendaIdz,
   akcja: komendaAkcja,
+  historia: komendaHistoria,
   eksportuj: komendaEksportuj,
   importuj: komendaImportuj
 };
