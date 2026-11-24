@@ -84,12 +84,13 @@ function komendaStart() {
 function komendaPomoc() {
   console.log("Dostępne polecenia: gra.start(), gra.pomoc(), gra.status(), gra.mapa(), gra.rozejrzyj(),");
   console.log("  gra.idz(\"prawo\"), gra.idz(\"lewo\"), gra.akcja(\"karta\"), gra.akcja(\"bezpiecznik\"),");
-  console.log("  gra.akcja(\"napraw\"), gra.akcja(\"wyjdz\"), gra.eksportuj(), gra.importuj(tekst)");
+  console.log("  gra.akcja(\"napraw\"), gra.akcja(\"wyjdz\"), gra.historia(), gra.eksportuj(), gra.importuj(tekst)");
   console.log("# Każdy udany ruch i każda wykonana akcja kosztuje dokładnie 1 energię.");
   console.log("# Mapa, opisy, pomoc i status są bezpłatne.");
   console.log("# Literówka, ruch w ścianę, ponowne zabranie przedmiotu i akcja bez spełnionych warunków są bezpłatne.");
   console.log("# Bezpiecznik znika z kieszeni po naprawie i nie wraca do magazynu.");
   console.log("# Wygrana ostatnim ruchem jest dozwolona. Po końcu gry ruch i akcje są zablokowane.");
+  console.log("# Historia zapamiętuje zaakceptowane komendy (odmowy się nie liczą) i jest częścią zapisu.");
   console.log("# Zapis: console.log(gra.eksportuj()), wczytanie: gra.importuj(prompt(\"Wklej JSON\"))");
 }
 
@@ -99,6 +100,7 @@ function komendaStatus() {
   console.log("Karta: " + (stan.karta ? "tak" : "nie"));
   console.log("Bezpiecznik w kieszeni: " + (stan.bezpiecznik ? "tak" : "nie"));
   console.log("Zasilanie: " + (stan.zasilanie ? "działa" : "wyłączone"));
+  console.log("Zaakceptowane komendy: " + stan.historia.length);
   if (stan.koniec) {
     console.log("Gra: zakończona (" + (stan.wygrana ? "wygrana" : "przegrana") + ")");
   } else {
@@ -139,6 +141,19 @@ function komendaAkcja(co) {
   wykonajKomende(co);
 }
 
+// Wypisuje historie zaakceptowanych komend (bezplatnie) i zwraca JEJ KOPIE,
+// zeby zmiana zwroconej tablicy w konsoli nie ruszyla biezacego stanu.
+function komendaHistoria() {
+  if (stan.historia.length === 0) {
+    console.log("Historia jest pusta. Zaakceptowane komendy pojawią się tutaj.");
+  } else {
+    for (let i = 0; i < stan.historia.length; i = i + 1) {
+      console.log((i + 1) + ". " + stan.historia[i]);
+    }
+  }
+  return [...stan.historia];
+}
+
 // ---------- Eksport i import ----------
 
 // Zwraca tekst JSON. Nie zapisuje pliku. Czlowiek kopiuje tekst do edytora.
@@ -176,16 +191,27 @@ function komendaImportuj(tekst) {
   if (pakiet === null || typeof pakiet !== "object" || Array.isArray(pakiet)) {
     return odrzucImport("zapis musi być obiektem {wersja, stan}.");
   }
-  if (pakiet.wersja !== WERSJA_ZAPISU) {
-    return odrzucImport("nieobsługiwana wersja zapisu (potrzebna " + WERSJA_ZAPISU + ").");
-  }
-  if (!czyStan(pakiet.stan)) {
-    return odrzucImport("stan w zapisie jest niepoprawny.");
+
+  // Kandydat powstaje osobno. Biezacy stan podmieniamy dopiero po sprawdzeniu calosci.
+  let kandydat = null;
+  if (pakiet.wersja === WERSJA_ZAPISU) {
+    if (!czyStan(pakiet.stan)) {
+      return odrzucImport("stan w zapisie jest niepoprawny.");
+    }
+    kandydat = kopiaStanu(pakiet.stan);
+  } else if (pakiet.wersja === 1) {
+    // Zapis ze starszej wersji (bez historii komend): przyjmujemy go z pusta historia.
+    if (!czyStanWersji1(pakiet.stan)) {
+      return odrzucImport("stan w zapisie (wersja 1) jest niepoprawny.");
+    }
+    kandydat = stanZWersji1(pakiet.stan);
+  } else {
+    return odrzucImport("nieobsługiwana wersja zapisu (obsługiwane: 1 i " + WERSJA_ZAPISU + ").");
   }
 
-  // Dopiero tutaj, po sprawdzeniu calosci: nowy obiekt tylko ze znanych pol.
-  stan = kopiaStanu(pakiet.stan);
-  console.log("Wczytano zapis. Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
+  // Dopiero tutaj, po sprawdzeniu calosci: podmiana stanu nowym obiektem ze znanych pol.
+  stan = kandydat;
+  console.log("Wczytano zapis (wersja " + pakiet.wersja + "). Pokój: " + nazwaPokoju(stan.pokoj) + ", energia: " + stan.energia + ".");
   return true;
 }
 
@@ -199,6 +225,7 @@ window.gra = {
   rozejrzyj: komendaRozejrzyj,
   idz: komendaIdz,
   akcja: komendaAkcja,
+  historia: komendaHistoria,
   eksportuj: komendaEksportuj,
   importuj: komendaImportuj
 };

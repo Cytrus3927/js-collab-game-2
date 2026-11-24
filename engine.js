@@ -5,7 +5,12 @@
 // Dlatego nazw const/let z tego pliku nie deklarujemy ponownie w app.js.
 
 const MAKS_ENERGIA = 10;
-const WERSJA_ZAPISU = 1;
+// Wersja 2 dodaje do stanu pole "historia" (rozszerzenie: historia komend).
+// Zapisy w wersji 1 nadal da sie wczytac (patrz czyStanWersji1 i stanZWersji1).
+const WERSJA_ZAPISU = 2;
+
+// Komendy silnika. Tylko takie napisy moga trafic do historii.
+const KOMENDY = ["lewo", "prawo", "karta", "bezpiecznik", "napraw", "wyjdz"];
 
 const POKOJ_RECEPCJA = 1;
 const POKOJ_MAGAZYN = 2;
@@ -74,7 +79,8 @@ function stanPoczatkowy() {
     bezpiecznik: false,
     zasilanie: false,
     koniec: false,
-    wygrana: false
+    wygrana: false,
+    historia: []
   };
 }
 
@@ -87,7 +93,9 @@ function kopiaStanu(stan) {
     bezpiecznik: stan.bezpiecznik,
     zasilanie: stan.zasilanie,
     koniec: stan.koniec,
-    wygrana: stan.wygrana
+    wygrana: stan.wygrana,
+    // Tablica jest kopiowana, zeby dwa stany nie dzielily jednego obiektu.
+    historia: [...stan.historia]
   };
 }
 
@@ -96,13 +104,16 @@ function odmowa(stanPrzed, komunikat) {
   return { stan: stanPrzed, komunikat: komunikat };
 }
 
-// Wspolna sciezka sukcesu. TYLKO tu naliczamy koszt jednej energii.
+// Wspolna sciezka sukcesu. TYLKO tu naliczamy koszt jednej energii
+// i TYLKO tu dopisujemy zaakceptowana komende do historii (odmowy nie trafiaja do historii).
 // Wygrana ma pierwszenstwo: porazka dopiero, gdy energia 0 i brak wygranej.
-function sukces(stanPrzed, zmiany, komunikat) {
+function sukces(stanPrzed, komenda, zmiany, komunikat) {
   const energia = stanPrzed.energia - 1;
   const wygrana = zmiany.wygrana === true;
   const koniec = wygrana || energia === 0;
-  const nowyStan = { ...stanPrzed, ...zmiany, energia: energia, wygrana: wygrana, koniec: koniec };
+  // Spread jest plytki, wiec historia dostaje NOWA tablice (stara zostaje nietknieta).
+  const historia = [...stanPrzed.historia, komenda];
+  const nowyStan = { ...stanPrzed, ...zmiany, energia: energia, wygrana: wygrana, koniec: koniec, historia: historia };
 
   let tekst = komunikat + " " + KOMUNIKATY.energia + energia + ".";
   if (koniec && !wygrana) {
@@ -126,7 +137,7 @@ function przejscie(stanPrzed, komenda) {
       if (znajdzPokoj(cel) === null) {
         return odmowa(stanPrzed, KOMUNIKATY.sciana);
       }
-      return sukces(stanPrzed, { pokoj: cel }, KOMUNIKATY.ruch + nazwaPokoju(cel) + ".");
+      return sukces(stanPrzed, komenda, { pokoj: cel }, KOMUNIKATY.ruch + nazwaPokoju(cel) + ".");
     }
 
     case "karta":
@@ -136,7 +147,7 @@ function przejscie(stanPrzed, komenda) {
       if (stanPrzed.pokoj !== POKOJ_RECEPCJA) {
         return odmowa(stanPrzed, KOMUNIKATY.kartaBrak);
       }
-      return sukces(stanPrzed, { karta: true }, KOMUNIKATY.kartaOk);
+      return sukces(stanPrzed, komenda, { karta: true }, KOMUNIKATY.kartaOk);
 
     case "bezpiecznik":
       if (stanPrzed.bezpiecznik) {
@@ -148,7 +159,7 @@ function przejscie(stanPrzed, komenda) {
       if (stanPrzed.pokoj !== POKOJ_MAGAZYN) {
         return odmowa(stanPrzed, KOMUNIKATY.bezpiecznikBrak);
       }
-      return sukces(stanPrzed, { bezpiecznik: true }, KOMUNIKATY.bezpiecznikOk);
+      return sukces(stanPrzed, komenda, { bezpiecznik: true }, KOMUNIKATY.bezpiecznikOk);
 
     case "napraw":
       if (stanPrzed.zasilanie) {
@@ -161,7 +172,7 @@ function przejscie(stanPrzed, komenda) {
         return odmowa(stanPrzed, KOMUNIKATY.naprawBrakBezpiecznika);
       }
       // Bezpiecznik jest zuzywany, zasilanie wraca.
-      return sukces(stanPrzed, { bezpiecznik: false, zasilanie: true }, KOMUNIKATY.naprawOk);
+      return sukces(stanPrzed, komenda, { bezpiecznik: false, zasilanie: true }, KOMUNIKATY.naprawOk);
 
     case "wyjdz":
       if (stanPrzed.pokoj !== POKOJ_WYJSCIE) {
@@ -173,7 +184,7 @@ function przejscie(stanPrzed, komenda) {
       if (!stanPrzed.zasilanie) {
         return odmowa(stanPrzed, KOMUNIKATY.wyjdzBrakZasilania);
       }
-      return sukces(stanPrzed, { wygrana: true }, KOMUNIKATY.wygrana);
+      return sukces(stanPrzed, komenda, { wygrana: true }, KOMUNIKATY.wygrana);
 
     default:
       return odmowa(stanPrzed, KOMUNIKATY.nieznanaKomenda + String(komenda));
@@ -215,5 +226,47 @@ function czyStan(wartosc) {
     return false;
   }
 
+  // Historia komend (wersja 2): tablica znanych komend.
+  if (!Array.isArray(wartosc.historia)) {
+    return false;
+  }
+  // Kazda zaakceptowana komenda kosztuje 1 energii, wiec wpisow nie moze byc wiecej niz zuzytej energii.
+  // Jest "mniejsze lub rowne", bo zapis z wersji 1 trafia tu z pusta historia.
+  if (wartosc.historia.length > MAKS_ENERGIA - wartosc.energia) {
+    return false;
+  }
+  for (let j = 0; j < wartosc.historia.length; j = j + 1) {
+    if (KOMENDY.indexOf(wartosc.historia[j]) === -1) {
+      return false;
+    }
+  }
+  // Wygrana zawsze konczy sie komenda "wyjdz" (o ile historia jest znana).
+  if (wartosc.wygrana && wartosc.historia.length > 0 && wartosc.historia[wartosc.historia.length - 1] !== "wyjdz") {
+    return false;
+  }
+
   return true;
+}
+
+// Zgodnosc wstecz: walidacja stanu z zapisu w wersji 1 (bez pola "historia").
+// Sprawdzamy to samo co czyStan, doklejajac pusta historie. Ewentualne obce pole "historia" w v1 jest ignorowane.
+function czyStanWersji1(wartosc) {
+  if (wartosc === null || typeof wartosc !== "object" || Array.isArray(wartosc)) {
+    return false;
+  }
+  return czyStan(stanZWersji1(wartosc));
+}
+
+// Zamienia poprawny stan z wersji 1 na stan wersji 2 (nowy obiekt, pusta historia).
+function stanZWersji1(wartosc) {
+  return {
+    pokoj: wartosc.pokoj,
+    energia: wartosc.energia,
+    karta: wartosc.karta,
+    bezpiecznik: wartosc.bezpiecznik,
+    zasilanie: wartosc.zasilanie,
+    koniec: wartosc.koniec,
+    wygrana: wartosc.wygrana,
+    historia: []
+  };
 }
